@@ -117,7 +117,7 @@ func TestGetStarshipHandlerInternalServerError(t *testing.T) {
 	}
 }
 
-func TestGetStarshipsHandlerNotFound(t *testing.T) {
+func TestGetStarshipsHandlerInternalServerError(t *testing.T) {
 	url := "/api/v1/starships"
 	expectedError := 500
 
@@ -138,7 +138,7 @@ func TestGetStarshipsHandlerNotFound(t *testing.T) {
 	}
 }
 
-func TestGetStarshipsHandlerInternalServerError(t *testing.T) {
+func TestGetStarshipsHandlerNotFound(t *testing.T) {
 	url := "/api/v1/starships"
 	expectedError := 404
 
@@ -229,7 +229,7 @@ func TestGetStarshipsHandlerSuccess(t *testing.T) {
 	}
 }
 
-func TestGetPeopleHandlerSuccess(t *testing.T) {
+func TestGetPeopleHandlerBadRequest(t *testing.T) {
 
 	url := "/api/v1/people/XX"
 	response := DoRequest(http.MethodGet, url, nil, "")
@@ -237,5 +237,219 @@ func TestGetPeopleHandlerSuccess(t *testing.T) {
 
 	if response.StatusCode != statusCodeExpected {
 		t.Errorf("Assertion error. Expected: %d, Got: %d", statusCodeExpected, response.StatusCode)
+	}
+}
+
+func TestGetPeopleHandlerSuccess(t *testing.T) {
+
+	url := "/api/v1/people/1"
+
+	mock := swapi.MockClient{GetPeopleFunc: func(id int) (models.People, error) {
+		if id != 1 {
+			t.Errorf("Assertion error. Expected: %d, Got: %d", 1, id)
+		}
+		return models.People{
+			Name:      "Luke Skywalker",
+			BirthYear: "19BBY",
+			EyeColor:  "blue",
+			Gender:    "male",
+			HairColor: "blond",
+			Height:    "172",
+			Mass:      "77",
+			SkinColor: "fair",
+			Homeworld: "https://swapi.dev/api/planets/1/",
+			Films: []string{
+				"https://swapi.dev/api/films/1/",
+				"https://swapi.dev/api/films/2/",
+				"https://swapi.dev/api/films/3/",
+				"https://swapi.dev/api/films/6/"},
+			Species: []string{},
+			Starships: []string{
+				"https://swapi.dev/api/starships/12/",
+				"https://swapi.dev/api/starships/22/",
+			},
+		}, nil
+	},
+		GetPeopleFuncControl: mockeable.CallsFuncControl{ExpectedCalls: 1},
+	}
+
+	mock.Use()
+	defer mockeable.CleanUpAndAssertControls(t, &mock)
+
+	response := DoRequest(http.MethodGet, url, nil, "")
+	statusCodeExpected := 200
+	expectedBody := `{"name":"Luke Skywalker","birth_year":"19BBY","eye_color":"blue","gender":"male","hair_color":"blond","height":"172","mass":"77","skin_color":"fair","homeworld":"https://swapi.dev/api/planets/1/","films":["https://swapi.dev/api/films/1/","https://swapi.dev/api/films/2/","https://swapi.dev/api/films/3/","https://swapi.dev/api/films/6/"],"species":[],"starships":["https://swapi.dev/api/starships/12/","https://swapi.dev/api/starships/22/"]}`
+
+	if response.StatusCode != statusCodeExpected {
+		t.Errorf("Assertion error. Expected: %d, Got: %d", statusCodeExpected, response.StatusCode)
+	}
+
+	if response.StringBody() != expectedBody {
+		t.Errorf("Assertion error. Expected: %s, Got: %s", expectedBody, response.StringBody())
+	}
+}
+
+func TestGetPeopleHandlerNotFound(t *testing.T) {
+
+	url := "/api/v1/people/1"
+	expectedError := 404
+
+	mock := swapi.MockClient{GetPeopleFunc: func(id int) (models.People, error) {
+		if id != 1 {
+			t.Errorf("Assertion error. Expected: %d, Got: %d", 1, id)
+		}
+		return models.People{}, errors.NewNotFound("Not found", "people not found")
+	},
+		GetPeopleFuncControl: mockeable.CallsFuncControl{ExpectedCalls: 1},
+	}
+
+	mock.Use()
+	defer mockeable.CleanUpAndAssertControls(t, &mock)
+
+	response := DoRequest(http.MethodGet, url, nil, "")
+
+	if response.StatusCode != expectedError {
+		t.Errorf("Assertion error. Expected: %d, Got: %d", expectedError, response.StatusCode)
+	}
+}
+
+func TestGetPeopleHandlerInternalServerError(t *testing.T) {
+
+	url := "/api/v1/people/1"
+	expectedError := 500
+
+	mock := swapi.MockClient{GetPeopleFunc: func(id int) (models.People, error) {
+		if id != 1 {
+			t.Errorf("Assertion error. Expected: %d, Got: %d", 1, id)
+		}
+		return models.People{}, errors.NewInternal()
+	},
+		GetPeopleFuncControl: mockeable.CallsFuncControl{ExpectedCalls: 1},
+	}
+
+	mock.Use()
+	defer mockeable.CleanUpAndAssertControls(t, &mock)
+
+	response := DoRequest(http.MethodGet, url, nil, "")
+
+	if response.StatusCode != expectedError {
+		t.Errorf("Assertion error. Expected: %d, Got: %d", expectedError, response.StatusCode)
+	}
+}
+
+func TestGetPeopleListHandlerNotFound(t *testing.T) {
+	url := "/api/v1/people"
+	expectedError := 404
+
+	mock := swapi.MockClient{
+		GetPeopleListFunc: func() (models.PeopleList, error) {
+			return models.PeopleList{}, errors.NewNotFound("Not found", "peoples not found")
+		},
+		GetPeopleListFuncControl: mockeable.CallsFuncControl{ExpectedCalls: 1},
+	}
+
+	mock.Use()
+	defer mockeable.CleanUpAndAssertControls(t, &mock)
+
+	response := DoRequest(http.MethodGet, url, nil, "")
+
+	if response.StatusCode != expectedError {
+		t.Errorf("Assertion error. Expected: %d, Got: %d", expectedError, response.StatusCode)
+	}
+}
+
+func TestGetPeopleListHandlerInternalServerError(t *testing.T) {
+	url := "/api/v1/people"
+	expectedError := 500
+
+	mock := swapi.MockClient{
+		GetPeopleListFunc: func() (models.PeopleList, error) {
+			return models.PeopleList{}, errors.NewInternal()
+		},
+		GetPeopleListFuncControl: mockeable.CallsFuncControl{ExpectedCalls: 1},
+	}
+
+	mock.Use()
+	defer mockeable.CleanUpAndAssertControls(t, &mock)
+
+	response := DoRequest(http.MethodGet, url, nil, "")
+
+	if response.StatusCode != expectedError {
+		t.Errorf("Assertion error. Expected: %d, Got: %d", expectedError, response.StatusCode)
+	}
+}
+
+func TestGetPeopleListHandlerSuccess(t *testing.T) {
+	url := "/api/v1/people"
+
+	mock := swapi.MockClient{
+		GetPeopleListFunc: func() (models.PeopleList, error) {
+			return models.PeopleList{
+				Count: 2,
+				Results: []models.People{
+					{
+						Name:      "Luke Skywalker",
+						BirthYear: "19BBY",
+						EyeColor:  "blue",
+						Gender:    "male",
+						HairColor: "blond",
+						Height:    "172",
+						Mass:      "77",
+						SkinColor: "fair",
+						Homeworld: "https://swapi.dev/api/planets/1/",
+						Films: []string{
+							"https://swapi.dev/api/films/1/",
+							"https://swapi.dev/api/films/2/",
+							"https://swapi.dev/api/films/3/",
+							"https://swapi.dev/api/films/6/",
+						},
+						Species: []string{},
+						Starships: []string{
+							"https://swapi.dev/api/starships/12/",
+							"https://swapi.dev/api/starships/22/",
+						},
+					},
+					{
+						Name:      "C-3PO",
+						BirthYear: "112BBY",
+						EyeColor:  "yellow",
+						Gender:    "n/a",
+						HairColor: "n/a",
+						Height:    "167",
+						Mass:      "75",
+						SkinColor: "gold",
+						Homeworld: "https://swapi.dev/api/planets/1/",
+						Films: []string{
+							"https://swapi.dev/api/films/1/",
+							"https://swapi.dev/api/films/2/",
+							"https://swapi.dev/api/films/3/",
+							"https://swapi.dev/api/films/4/",
+							"https://swapi.dev/api/films/5/",
+							"https://swapi.dev/api/films/6/",
+						},
+						Species: []string{
+							"https://swapi.dev/api/species/2/",
+						},
+						Starships: []string{},
+					},
+				},
+			}, nil
+		},
+		GetPeopleListFuncControl: mockeable.CallsFuncControl{ExpectedCalls: 1},
+	}
+
+	mock.Use()
+	defer mockeable.CleanUpAndAssertControls(t, &mock)
+
+	response := DoRequest(http.MethodGet, url, nil, "")
+	statusCodeExpected := 200
+	expectedBody := `{"count":2,"results":[{"name":"Luke Skywalker","birth_year":"19BBY","eye_color":"blue","gender":"male","hair_color":"blond","height":"172","mass":"77","skin_color":"fair","homeworld":"https://swapi.dev/api/planets/1/","films":["https://swapi.dev/api/films/1/","https://swapi.dev/api/films/2/","https://swapi.dev/api/films/3/","https://swapi.dev/api/films/6/"],"species":[],"starships":["https://swapi.dev/api/starships/12/","https://swapi.dev/api/starships/22/"]},{"name":"C-3PO","birth_year":"112BBY","eye_color":"yellow","gender":"n/a","hair_color":"n/a","height":"167","mass":"75","skin_color":"gold","homeworld":"https://swapi.dev/api/planets/1/","films":["https://swapi.dev/api/films/1/","https://swapi.dev/api/films/2/","https://swapi.dev/api/films/3/","https://swapi.dev/api/films/4/","https://swapi.dev/api/films/5/","https://swapi.dev/api/films/6/"],"species":["https://swapi.dev/api/species/2/"],"starships":[]}]}`
+
+	if response.StatusCode != statusCodeExpected {
+		t.Errorf("Assertion error. Expected: %d, Got: %d", statusCodeExpected, response.StatusCode)
+	}
+
+	if response.StringBody() != expectedBody {
+		t.Errorf("Assertion error. Expected: %s, Got: %s", expectedBody, response.StringBody())
 	}
 }
