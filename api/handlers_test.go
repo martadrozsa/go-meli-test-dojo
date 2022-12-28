@@ -140,7 +140,7 @@ func TestGetStarshipsHandlerNotFound(t *testing.T) {
 
 func TestGetStarshipsHandlerInternalServerError(t *testing.T) {
 	url := "/api/v1/starships"
-	expectedError := 405
+	expectedError := 404
 
 	mock := swapi.MockClient{
 		GetStarshipsFunc: func() (models.Starships, error) {
@@ -226,5 +226,16 @@ func TestGetStarshipsHandlerSuccess(t *testing.T) {
 
 	if response.StringBody() != expectedBody {
 		t.Errorf("Assertion error. Expected: %s, Got: %s", expectedBody, response.StringBody())
+	}
+}
+
+func TestGetPeopleHandlerSuccess(t *testing.T) {
+
+	url := "/api/v1/people/XX"
+	response := DoRequest(http.MethodGet, url, nil, "")
+	statusCodeExpected := 400
+
+	if response.StatusCode != statusCodeExpected {
+		t.Errorf("Assertion error. Expected: %d, Got: %d", statusCodeExpected, response.StatusCode)
 	}
 }
